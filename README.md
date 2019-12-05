@@ -1,2 +1,2 @@
 # GitlabCI
-My practice settings
+My practice settings Gitlab Ci
