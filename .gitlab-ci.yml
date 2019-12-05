@@ -1,0 +1,27 @@
+stages:
+  - deploy
+deploy:
+  stage: deploy
+  image: dinofizz/rsync-ssh
+  script:
+    - apk update && apk add git
+
+    - mkdir -p ~/.ssh
+    - echo -e "$SERVER_KEY" > ~/.ssh/server_rsa
+    - echo -e "$GITLAB_KEY" > ~/.ssh/gitlab_rsa
+    - echo -e "$SSH_CONFIG" > ~/.ssh/config
+    - ssh-keyscan -t rsa gitlab.appus.software >> ~/.ssh/known_hosts
+
+    - chown root:root ~/.ssh
+    - chmod 700 ~/.ssh
+    - chmod 600 ~/.ssh/server_rsa
+    - chmod 600 ~/.ssh/gitlab_rsa
+    - chmod 600 ~/.ssh/known_hosts
+
+    - git submodule update --init --recursive
+
+    - ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_SERVER_HOST "mkdir -p /home/ubuntu/likulatorinstagram"
+    - rsync -az --no-perms --no-owner --no-group --delete-during -e "ssh -o StrictHostKeyChecking=no" . $SSH_USER@$SSH_SERVER_HOST:/home/ubuntu/likulatorinstagram
+    - ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_SERVER_HOST "cd /home/ubuntu/likulatorinstagram && docker-compose up -d --force-recreate --remove-orphans"
+  only:
+    - master
